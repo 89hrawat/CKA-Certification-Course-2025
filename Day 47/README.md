@@ -2,6 +2,8 @@
 
 ## Video reference for Day 47 is the following:
 
+[![Watch the video](https://img.youtube.com/vi/5TKKG-uKU4o/maxresdefault.jpg)](https://www.youtube.com/watch?v=5TKKG-uKU4o&ab_channel=CloudWithVarJosh)
+
 ---
 ## ⭐ Support the Project  
 If this **repository** helps you, give it a ⭐ to show your support and help others discover it! 
@@ -26,10 +28,10 @@ If this **repository** helps you, give it a ⭐ to show your support and help ot
   * [Step 1: Preparing the Cluster (KIND + Calico)](#step-1-preparing-the-cluster-kind--calico). 
   * [Step 2: Creating Namespace and Deploying Frontend, Backend, and DB](#step-2-creating-namespace-and-deploying-frontend-backend-and-db)  
   * [Step 3: Verify the Current State — Everyone Can Talk to Everyone](#step-3-verify-the-current-state--everyone-can-talk-to-everyone)  
-  * [Step 4: Creation of NetworkPolicies for All 3 Tiers](#step-4-creation-of-networkpolicies-for-all-3-tiers). 
-  * [Step 5: Verification of Connectivity](#step-5-verification-of-connectivity)  
-  * [Namespace Separation Exercise](#namespace-separation-exercise)  
-* [AND vs OR Selectors in NetworkPolicy](#and-vs-or-selectors-in-networkpolicy)  
+  * [Step 4: Creation of NetworkPolicies for All 3 Tiers](#step-4-creation-of-networkpolicies-for-all-3-tiers)
+  * [Step 5 – Verification of Connectivity](#step-5--verification-of-connectivity)  
+* [Task for You](#task-for-you)
+* [AND vs OR: How from Rules Are Evaluated](#and-vs-or-how-from-rules-are-evaluated)  
 * [Conclusion](#conclusion)  
 * [References](#references)  
 
@@ -936,7 +938,6 @@ egress:
       - namespaceSelector:
           matchLabels:
             kubernetes.io/metadata.name: kube-system
-  - to:
       - podSelector:
           matchLabels:
             k8s-app: kube-dns
@@ -945,11 +946,16 @@ egress:
 **What it means**:
 Allow egress to:
 
-* **Any pod** in the `kube-system` namespace (**even if it’s not CoreDNS**) **OR**
-* **Any pod in any namespace** that has label `k8s-app=kube-dns`
+* **Any pod in any namespace** with the label `k8s-app=kube-dns`, **OR**
+* **Any pod** in the `kube-system` namespace (regardless of its labels)
 
 🔴 **Effect**:
-This is **too permissive**. A pod outside `kube-system` can spoof the `k8s-app=kube-dns` label and receive DNS traffic.
+This is **too permissive**. For example:
+
+* A pod **outside `kube-system`** can simply label itself with `k8s-app=kube-dns` and receive DNS traffic.
+* A pod **inside `kube-system`** can receive traffic even if it's **not** CoreDNS.
+
+👉 This defeats the intention of scoping DNS egress **only** to CoreDNS pods in the `kube-system` namespace.
 
 ---
 
@@ -958,7 +964,7 @@ This is **too permissive**. A pod outside `kube-system` can spoof the `k8s-app=k
 | Structure                                    | Logic Applied | Traffic Allowed To                                              |
 | -------------------------------------------- | ------------- | --------------------------------------------------------------- |
 | Combined `namespaceSelector` + `podSelector` | AND           | Only `kube-dns` pods in `kube-system`                           |
-| Two separate `to:` entries                   | OR            | Any pod in `kube-system` **OR** any pod with `k8s-app=kube-dns` |
+| Two separate `to:` entries                   | OR            | Any pod in `kube-system` **OR** any pod with `k8s-app=kube-dns` label |
 
 ---
 
@@ -1140,7 +1146,7 @@ This models a realistic production setup, where database workloads are often iso
 
 ---
 
-## Subtle But Crucial: How `from:` Rules Are Evaluated
+## AND vs OR: How `from:` Rules Are Evaluated
 
 Consider this example NetworkPolicy rule:
 
