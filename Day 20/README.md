@@ -485,6 +485,9 @@ It helps you ensure:
    - In order to apply updated resource requests/limits, **VPA will restart pods.**
    - This is crucial because Kubernetes **cannot update CPU/Memory requests on a running pod** — the pod must be recreated.
 
+> As of Kubernetes **v1.33**, the Vertical Pod Autoscaler (VPA) supports **in-place resizing** of container CPU and memory without restarting pods. This reduces churn and helps right-size long-running or stateful workloads. It requires kubelet and VPA controller support, so validate kubelet and VPA controller configurations carefully. Always test on non-production clusters before enabling in production.
+Note: I'll soon be creating a video on this.
+
 
 ## **Why use VPA?**
 
